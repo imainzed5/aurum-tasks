@@ -4,7 +4,7 @@ A clean, gold-accented todo list built with plain HTML, CSS and JavaScript. No f
 
 ![Aurum Tasks screenshot](docs/screenshot.png)
 
-**Live demo:** `https://YOUR-USERNAME.github.io/aurum-tasks/` (replace with your link after deploying)
+**Live demo:** <https://imainzed5.github.io/aurum-tasks/>
 
 ## Features
 
@@ -102,13 +102,13 @@ If you open `index.html` straight from disk anyway, the page shows a note explai
    git add .
    git commit -m "Initial commit: Aurum Tasks"
    git branch -M main
-   git remote add origin https://github.com/YOUR-USERNAME/aurum-tasks.git
+   git remote add origin https://github.com/imainzed5/aurum-tasks.git
    git push -u origin main
    ```
 
 3. On GitHub, open the repo's **Settings → Pages**.
 4. Under **Build and deployment**, set **Source** to *Deploy from a branch*, choose branch `main` and folder `/ (root)`, then **Save**.
-5. After a minute or two the site is live at `https://YOUR-USERNAME.github.io/aurum-tasks/`.
+5. After a minute or two the site is live at <https://imainzed5.github.io/aurum-tasks/>.
 
 Every later `git push` to `main` redeploys the site automatically.
 

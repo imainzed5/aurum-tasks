@@ -52,8 +52,6 @@ Conventions:
 
 All planned phases are done: core CRUD with saving, filters/search/sort, priority/due/tags, theme toggle, drag-and-drop, export/import, mobile layout, README with screenshot. It was checked in headless Chromium (43 checks: features, persistence, import/export, shortcuts, no console errors, no horizontal scroll on mobile in both themes).
 
-Not done yet:
+Published: the repo is https://github.com/imainzed5/aurum-tasks (public), and GitHub Pages serves `main` at https://imainzed5.github.io/aurum-tasks/. Every push to `main` redeploys.
 
-- Pushing to GitHub and turning on Pages (steps are in README.md)
-- Replacing `YOUR-USERNAME` in README.md with the real GitHub username and live link
-- Ideas for later: PWA/offline, subtasks, recurring tasks, cloud sync (Firebase/Supabase), Vitest unit tests for `utils.js` and `store.js`
+Ideas for later: PWA/offline, subtasks, recurring tasks, cloud sync (Firebase/Supabase), Vitest unit tests for `utils.js` and `store.js`.
