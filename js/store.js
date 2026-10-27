@@ -2,7 +2,7 @@
 // The UI never changes state directly; it calls these functions, and every
 // change notifies subscribers so the page can re-render.
 
-import { uid, todayISO, addDaysISO, parseTags } from './utils.js';
+import { uid, todayISO, addDaysISO, parseTags, isISODate } from './utils.js';
 
 export const TASKS_KEY = 'aurum-tasks:tasks';
 const PREFS_KEY = 'aurum-tasks:prefs';
@@ -49,7 +49,7 @@ export function normalizeTask(raw) {
     notes: typeof raw.notes === 'string' ? raw.notes.trim().slice(0, 1000) : '',
     done: raw.done === true,
     priority: PRIORITIES.includes(raw.priority) ? raw.priority : 'medium',
-    dueDate: typeof raw.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.dueDate) ? raw.dueDate : null,
+    dueDate: isISODate(raw.dueDate) ? raw.dueDate : null,
     tags,
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now(),
     completedAt: Number.isFinite(raw.completedAt) ? raw.completedAt : null,

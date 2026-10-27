@@ -12,12 +12,15 @@ export function truncate(text, max = 40) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+/** Delays fn until calls stop for `ms`. Call `.cancel()` to drop a pending call. */
 export function debounce(fn, ms) {
   let timer;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), ms);
   };
+  debounced.cancel = () => clearTimeout(timer);
+  return debounced;
 }
 
 /* ---------- Dates ----------
@@ -31,6 +34,11 @@ export function toISODate(date) {
 export function fromISODate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
+}
+
+/** True only for a real calendar date in "YYYY-MM-DD" form, so "2026-02-30" is rejected. */
+export function isISODate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && toISODate(fromISODate(value)) === value;
 }
 
 export const todayISO = () => toISODate(new Date());

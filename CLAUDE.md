@@ -10,7 +10,7 @@ An internship portfolio project: a todo list web app that is "simple but not too
 
 - **Plain HTML, CSS and JavaScript (ES modules). No framework, no bundler, no build step.** GitHub Pages serves the files as they are.
 - **Static hosting only.** There is no backend. Data lives in `localStorage`.
-- ES modules don't load from `file://`. Test with `python -m http.server 8000` or VS Code Live Server.
+- ES modules don't load from `file://` (the page shows `#file-note` there instead). Test with `node serve.mjs` (no dependencies; Python isn't installed on the owner's machine) or VS Code Live Server.
 
 ## Design direction (from the owner)
 

@@ -39,6 +39,11 @@
   </header>
 
   <main class="main">
+    <!-- Shown only when the page is opened straight from disk, where the app can't start -->
+    <div class="file-note" id="file-note" role="alert" hidden>
+      <p><strong>Aurum Tasks can't start from a file opened directly.</strong> Browsers block JavaScript modules on <code>file://</code> pages. In this folder run <code>node serve.mjs</code>, then open <a href="http://localhost:8000/">localhost:8000</a>.</p>
+    </div>
+
     <!-- Summary: greeting, progress ring and today's numbers -->
     <section class="summary" aria-labelledby="greeting">
       <p class="eyebrow" id="today-label">Today</p>
@@ -247,5 +252,9 @@
 </div>
 
 <noscript><p class="noscript">Aurum Tasks needs JavaScript turned on.</p></noscript>
+<script>
+  // Browsers refuse to load ES modules from file://, so js/app.js never runs. Say why.
+  if (location.protocol === 'file:') document.getElementById('file-note').hidden = false;
+</script>
 </body>
 </html>

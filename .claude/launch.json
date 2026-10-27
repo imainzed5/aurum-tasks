@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aurum-tasks",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["serve.mjs"],
+      "port": 8000
+    }
+  ]
+}

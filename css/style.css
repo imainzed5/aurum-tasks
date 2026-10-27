@@ -599,6 +599,18 @@ kbd {
 .sample-note strong { color: var(--ink); }
 .sample-actions { display: flex; gap: 14px; }
 
+.file-note {
+  padding: 14px 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+  color: var(--ink);
+  font-size: 14px;
+}
+.file-note p { margin: 0; }
+.file-note code { font: 12.5px var(--font-mono); }
+.file-note a { color: inherit; font-weight: 600; }
+
 /* ---------- Tasks ---------- */
 
 .task-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }

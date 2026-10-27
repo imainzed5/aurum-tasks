@@ -86,8 +86,11 @@ The UI never changes data directly, which keeps the logic in one place and easy 
 
 The JavaScript uses ES modules, which browsers will not load from a `file://` path. Serve the folder instead:
 
+- **Node.js:** run `node serve.mjs` in this folder, then open <http://localhost:8000>. No packages to install.
 - **VS Code:** install the *Live Server* extension, right-click `index.html`, choose **Open with Live Server**.
 - **Python:** run `python -m http.server 8000` in this folder, then open <http://localhost:8000>.
+
+If you open `index.html` straight from disk anyway, the page shows a note explaining this instead of loading the app.
 
 ## Deploy to GitHub Pages
 

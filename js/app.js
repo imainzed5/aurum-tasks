@@ -218,6 +218,7 @@ function initToolbar() {
   search.addEventListener('input', () => update(search.value));
   search.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
+    update.cancel(); // or a search typed just before Escape comes back
     search.value = '';
     store.setSearch('');
     search.blur();

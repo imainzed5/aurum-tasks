@@ -214,7 +214,10 @@ function rememberFocus() {
   const active = document.activeElement;
   if (!active || active === document.body) return null;
   const row = active.closest('.task');
-  if (row && active.dataset.role) return { el: active, type: 'task', id: row.dataset.id, role: active.dataset.role };
+  if (row && active.dataset.role) {
+    const index = [...row.parentElement.children].indexOf(row);
+    return { el: active, type: 'task', id: row.dataset.id, role: active.dataset.role, index };
+  }
   if (active.classList.contains('chip') || active.classList.contains('tag-pill')) {
     return { el: active, type: 'chip', tag: active.dataset.tag };
   }
@@ -226,12 +229,24 @@ function restoreFocus(e, focus) {
   let target = null;
   if (focus.type === 'task') {
     target = e.list.querySelector(`.task[data-id="${CSS.escape(focus.id)}"] [data-role="${focus.role}"]`);
+    // The task left this view (deleted, or ticked off under Active), so move
+    // to the row that took its place instead of dropping focus to the page.
+    if (!target) target = nearbyRowControl(e.list, focus);
   } else {
     target = e.tagRow.querySelector(`.chip[data-tag="${CSS.escape(focus.tag)}"]`);
   }
   if (!target) return;
   target.focus({ preventScroll: true });
   if (focus.role === 'handle') target.scrollIntoView({ block: 'nearest' });
+}
+
+function nearbyRowControl(list, focus) {
+  const rows = list.children;
+  if (!rows.length) return null;
+  const row = rows[Math.min(focus.index, rows.length - 1)];
+  const same = row.querySelector(`[data-role="${focus.role}"]`);
+  // Edit and delete are display:none on phones, so fall back to the checkbox.
+  return same && same.offsetParent !== null ? same : row.querySelector('[data-role="check"]');
 }
 
 /* ---------- Composer preview ---------- */
@@ -319,9 +334,14 @@ export function setupEditor({ onSave, onDelete }) {
     dialog.close();
     onDelete(id);
   });
-  // Clicking the dimmed backdrop closes the dialog.
+  // Clicking the dimmed backdrop closes the dialog. A press that starts inside
+  // the form (selecting text, say) and is released over the backdrop doesn't.
+  let pressedBackdrop = false;
+  dialog.addEventListener('pointerdown', (ev) => {
+    pressedBackdrop = ev.target === dialog;
+  });
   dialog.addEventListener('click', (ev) => {
-    if (ev.target === dialog) dialog.close();
+    if (ev.target === dialog && pressedBackdrop) dialog.close();
   });
   dialog.addEventListener('close', () => {
     editingId = null;
