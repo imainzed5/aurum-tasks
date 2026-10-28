@@ -2,10 +2,11 @@
 
 import * as store from './store.js';
 import * as ui from './ui.js';
-import { parseQuickAdd, parseTags, debounce, todayISO, truncate } from './utils.js';
+import { parseQuickAdd, parseTags, extractTags, debounce, todayISO, truncate } from './utils.js';
 
 const THEME_KEY = 'aurum-tasks:theme';
 const $ = (id) => document.getElementById(id);
+const plural = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
 
 function render() {
   ui.render({
@@ -14,6 +15,12 @@ function render() {
     stats: store.getStats(),
     tagCounts: store.getTagCounts(),
     activeTag: store.getActiveTag(),
+    notes: {
+      visible: store.getVisibleNotes(),
+      tagCounts: store.getNoteTagCounts(),
+      activeTag: store.getActiveNoteTag(),
+      byTask: store.getNotesByTask(),
+    },
   });
   store.consumeLastAdded();
 }
@@ -41,6 +48,15 @@ function initTheme() {
   $('theme-toggle').addEventListener('click', () => {
     applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
   });
+}
+
+/* ---------- Views: the Tasks / Notes switch is two links, #tasks and #notes ---------- */
+
+const viewFromHash = () => (location.hash === '#notes' ? 'notes' : 'tasks');
+
+function initViews() {
+  store.setView(viewFromHash());
+  window.addEventListener('hashchange', () => store.setView(viewFromHash()));
 }
 
 /* ---------- Adding tasks ---------- */
@@ -115,6 +131,7 @@ function initList() {
     if (button.dataset.action === 'edit') openEditorFor(id);
     else if (button.dataset.action === 'delete') deleteWithUndo(id);
     else if (button.classList.contains('tag-pill')) store.setTag(button.dataset.tag);
+    else if (button.classList.contains('note-pill')) openNoteFor(button.dataset.note);
   });
 
   // On phones the edit and delete icons are hidden, so a tap opens the editor.
@@ -206,23 +223,26 @@ function initDrag(list) {
 
 /* ---------- Toolbar ---------- */
 
+/** Live search that waits for a pause in typing. Escape clears it. */
+function initSearch(input, setSearch) {
+  const update = debounce((value) => setSearch(value), 120);
+  input.addEventListener('input', () => update(input.value));
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape') return;
+    update.cancel(); // or a search typed just before Escape comes back
+    input.value = '';
+    setSearch('');
+    input.blur();
+  });
+}
+
 function initToolbar() {
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => store.setFilter(tab.dataset.filter));
   }
 
   $('sort').addEventListener('change', (ev) => store.setSort(ev.target.value));
-
-  const search = $('search');
-  const update = debounce((value) => store.setSearch(value), 120);
-  search.addEventListener('input', () => update(search.value));
-  search.addEventListener('keydown', (ev) => {
-    if (ev.key !== 'Escape') return;
-    update.cancel(); // or a search typed just before Escape comes back
-    search.value = '';
-    store.setSearch('');
-    search.blur();
-  });
+  initSearch($('search'), store.setSearch);
 
   $('tag-row').addEventListener('click', (ev) => {
     const chip = ev.target.closest('.chip');
@@ -232,9 +252,143 @@ function initToolbar() {
   });
 }
 
+/* ---------- Notes ---------- */
+
+function openNoteFor(id) {
+  const { notes, tasks } = store.getState();
+  const note = notes.find((n) => n.id === id);
+  if (note) ui.openNoteEditor(note, tasks);
+}
+
+function deleteNoteWithUndo(id) {
+  const note = store.getState().notes.find((n) => n.id === id);
+  const removed = store.deleteNote(id);
+  if (!removed.length) return;
+  ui.showToast(`Deleted “${truncate(ui.noteName(note), 36)}”`, { label: 'Undo', run: () => store.restoreNotes(removed) });
+}
+
+/** Ticks a checklist item on a card or in Preview, letting the tick animate first. */
+function tickNoteItem(id, input) {
+  const done = input.checked;
+  input.closest('.md-item').classList.toggle('is-done', done);
+  setTimeout(() => store.setNoteItem(id, Number(input.dataset.line), done), 220);
+}
+
+function lineToTask(id, line) {
+  const moved = store.noteLineToTask(id, line);
+  if (!moved) return;
+  ui.showToast(`Moved “${truncate(moved.task.title, 32)}” to Tasks`, { label: 'Undo', run: () => store.undoNoteLineToTask(moved) });
+}
+
+function initNoteComposer() {
+  const form = $('note-composer');
+  const title = $('note-new-title');
+  const body = $('note-new-body');
+
+  // The text box opens while the composer has focus or holds a draft.
+  const hasDraft = () => Boolean(title.value.trim() || body.value.trim());
+  form.addEventListener('focusin', () => form.classList.add('is-open'));
+  form.addEventListener('focusout', (ev) => {
+    if (!form.contains(ev.relatedTarget) && !hasDraft()) form.classList.remove('is-open');
+  });
+
+  // Enter in the title moves on to the text; Ctrl+Enter adds the note.
+  title.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' || ev.ctrlKey || ev.metaKey) return;
+    ev.preventDefault();
+    body.focus();
+  });
+  form.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+      ev.preventDefault();
+      form.requestSubmit();
+    } else if (ev.key === 'Escape') {
+      ev.target.blur();
+    }
+  });
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const { text, tags } = extractTags(title.value);
+    const note = store.addNote({ title: text, body: body.value, tags });
+    if (!note) {
+      title.focus();
+      ui.showToast('Write a title or some text first.');
+      return;
+    }
+
+    // If a search or tag would hide the new note, show every note instead.
+    if (!store.getVisibleNotes().some((n) => n.id === note.id)) {
+      store.resetNoteView();
+      ui.showToast('Showing all notes so you can see the new one.');
+    }
+
+    form.reset();
+    title.focus();
+  });
+}
+
+function initNotes() {
+  const grid = $('note-grid');
+
+  grid.addEventListener('change', (ev) => {
+    const input = ev.target.closest('[data-role="item"]');
+    if (input) tickNoteItem(input.closest('.note-card').dataset.id, input);
+  });
+
+  grid.addEventListener('click', (ev) => {
+    const card = ev.target.closest('.note-card');
+    if (!card) return;
+    const { id } = card.dataset;
+    const button = ev.target.closest('button');
+    if (button) {
+      const { action } = button.dataset;
+      if (action === 'edit') openNoteFor(id);
+      else if (action === 'delete') deleteNoteWithUndo(id);
+      else if (action === 'pin') store.updateNote(id, { pinned: button.getAttribute('aria-pressed') !== 'true' });
+      else if (action === 'to-task') lineToTask(id, Number(button.dataset.line));
+      else if (action === 'open-task') openEditorFor(button.dataset.task);
+      else if (button.classList.contains('tag-pill')) store.setNoteTag(button.dataset.tag);
+      return;
+    }
+    // Anywhere else on the card opens it, except links, checklist items, and
+    // the end of a drag that selected some text.
+    if (ev.target.closest('a, label, input') || !window.getSelection().isCollapsed) return;
+    openNoteFor(id);
+  });
+
+  $('note-sort').addEventListener('change', (ev) => store.setNoteSort(ev.target.value));
+  initSearch($('note-search'), store.setNoteSearch);
+
+  $('note-tag-row').addEventListener('click', (ev) => {
+    const chip = ev.target.closest('.chip');
+    if (!chip) return;
+    const tag = chip.dataset.tag || null;
+    store.setNoteTag(store.getActiveNoteTag() === tag ? null : tag);
+  });
+
+  $('note-samples-clear').addEventListener('click', () => {
+    const removed = store.clearSampleNotes();
+    ui.showToast('Sample notes cleared.', { label: 'Undo', run: () => store.undoClearSampleNotes(removed) });
+    $('note-new-title').focus();
+  });
+  $('note-samples-keep').addEventListener('click', () => store.keepSampleNotes());
+
+  ui.setupNoteEditor({
+    onChange: (id, patch) => store.updateNote(id, patch),
+    onDelete: deleteNoteWithUndo,
+    onDiscard: (id) => {
+      const removed = store.deleteNote(id);
+      if (removed.length) ui.showToast('Empty note removed.', { label: 'Undo', run: () => store.restoreNotes(removed) });
+    },
+    onTickItem: tickNoteItem,
+    onLineToTask: lineToTask,
+  });
+}
+
 /* ---------- Footer, samples, import/export ---------- */
 
-function exportTasks() {
+function exportAll() {
   const blob = new Blob([store.exportData()], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = Object.assign(document.createElement('a'), { href: url, download: `aurum-tasks-${todayISO()}.json` });
@@ -242,8 +396,8 @@ function exportTasks() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  const count = store.getState().tasks.length;
-  ui.showToast(`Exported ${count} ${count === 1 ? 'task' : 'tasks'} to a JSON file.`);
+  const { tasks, notes } = store.getState();
+  ui.showToast(`Exported ${plural(tasks.length, 'task')} and ${plural(notes.length, 'note')} to a JSON file.`);
 }
 
 function initFooter() {
@@ -254,17 +408,18 @@ function initFooter() {
     ui.showToast(`Cleared ${n} completed ${n === 1 ? 'task' : 'tasks'}`, { label: 'Undo', run: () => store.restore(removed) });
   });
 
-  $('export-btn').addEventListener('click', exportTasks);
-
+  // Both views have Export and Import buttons; one file holds tasks and notes.
   const fileInput = $('import-file');
-  $('import-btn').addEventListener('click', () => fileInput.click());
+  for (const button of document.querySelectorAll('[data-io="export"]')) button.addEventListener('click', exportAll);
+  for (const button of document.querySelectorAll('[data-io="import"]')) button.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = '';
     if (!file) return;
     try {
-      const count = store.importTasks(JSON.parse(await file.text()));
-      ui.showToast(count ? `Imported ${count} ${count === 1 ? 'task' : 'tasks'}.` : 'Nothing new in that file. Those tasks are already here.');
+      const added = store.importData(JSON.parse(await file.text()));
+      const parts = [added.tasks && plural(added.tasks, 'task'), added.notes && plural(added.notes, 'note')].filter(Boolean);
+      ui.showToast(parts.length ? `Imported ${parts.join(' and ')}.` : 'Nothing new in that file. Everything in it is already here.');
     } catch {
       ui.showToast('That file is not an Aurum Tasks export. Choose a .json file made with Export.');
     }
@@ -291,13 +446,15 @@ function initShortcuts() {
       if (ev.key === 'Escape' && ev.target.id === 'new-title') ev.target.blur();
       return;
     }
+    const notes = store.getState().view === 'notes';
     if (ev.key === 'n' || ev.key === 'N') {
       ev.preventDefault();
-      $('new-title').focus();
+      $(notes ? 'note-new-title' : 'new-title').focus();
     } else if (ev.key === '/') {
       ev.preventDefault();
-      $('search').focus();
-      $('search').select();
+      const search = $(notes ? 'note-search' : 'search');
+      search.focus();
+      search.select();
     }
   });
 }
@@ -305,9 +462,12 @@ function initShortcuts() {
 /* ---------- Start ---------- */
 
 initTheme();
+initViews();
 initComposer();
 initToolbar();
 initList();
+initNoteComposer();
+initNotes();
 initFooter();
 initShortcuts();
 ui.setupEditor({ onSave: (id, patch) => store.updateTask(id, patch), onDelete: deleteWithUndo });
@@ -317,8 +477,10 @@ render();
 
 // Keep several open tabs in sync, and refresh "today" labels after the tab sleeps.
 window.addEventListener('storage', (ev) => {
-  if (ev.key === store.TASKS_KEY) store.reload();
+  if (ev.key === store.TASKS_KEY || ev.key === store.NOTES_KEY) store.reload();
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) render();
 });
+window.addEventListener('resize', debounce(ui.markClippedNotes, 150));
+document.fonts?.ready.then(ui.markClippedNotes);

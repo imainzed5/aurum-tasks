@@ -79,6 +79,18 @@ export function formatLongDate(date = new Date()) {
   return `${weekday} · ${dayMonth}`;
 }
 
+/** How long ago a timestamp was: "Just now", "5 min ago", "3 h ago", "Yesterday", "Oct 12". */
+export function formatRelative(ts, now = Date.now()) {
+  const mins = Math.floor((now - ts) / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const iso = toISODate(new Date(ts));
+  const days = daysFromToday(iso);
+  if (days === 0) return `${Math.floor(mins / 60)} h ago`;
+  if (days === -1) return 'Yesterday';
+  return formatShortDate(iso);
+}
+
 export function greeting(date = new Date()) {
   const hour = date.getHours();
   if (hour < 12) return 'Good morning';
@@ -97,6 +109,41 @@ export function parseTags(text) {
     if (tag && !tags.includes(tag)) tags.push(tag);
   }
   return tags.slice(0, 8);
+}
+
+/** Pulls #tag words out of text: "Plan #work trip" -> { text: "Plan  trip", tags: ["work"] } */
+export function extractTags(text) {
+  const tags = [];
+  const rest = String(text || '').replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (_, space, tag) => {
+    const clean = tag.toLowerCase().slice(0, 24);
+    if (!tags.includes(clean)) tags.push(clean);
+    return space;
+  });
+  return { text: rest, tags };
+}
+
+/* ---------- Checklist lines in notes ----------
+   "- [ ] Buy milk" and "- [x] Done thing" (also with * or +). */
+
+const CHECKLIST_LINE = /^(\s*[-*+]\s+\[)([ xX])(\](?:\s+(.*))?)$/;
+
+/** { done, text } for a checklist line, or null for any other line. */
+export function checklistItem(line) {
+  const match = CHECKLIST_LINE.exec(line);
+  return match ? { done: match[2] !== ' ', text: (match[4] || '').trim() } : null;
+}
+
+/** "Ask about **API keys**" -> "Ask about API keys". Drops inline Markdown marks and keeps link text. */
+export function stripInlineMarkdown(text) {
+  return String(text)
+    .replace(/\[([^\]\n]+)\]\((?:https?:\/\/|mailto:)[^\s)]+\)/g, '$1')
+    .replace(/(\*\*|~~|`)(?!\s)(.+?)(?<!\s)\1/g, '$2')
+    .replace(/(^|[^\p{L}\p{N}*_])([*_])(?![\s*_])(.+?)(?<![\s*_])\2(?![\p{L}\p{N}*_])/gu, '$1$3');
+}
+
+/** The same line with its box ticked or unticked. Other lines come back unchanged. */
+export function toggleChecklistLine(line) {
+  return line.replace(CHECKLIST_LINE, (_, start, mark, end) => `${start}${mark === ' ' ? 'x' : ' '}${end}`);
 }
 
 /* ---------- Quick-add syntax ----------
@@ -119,16 +166,11 @@ function resolveDateWord(word) {
 }
 
 export function parseQuickAdd(text) {
-  const tags = [];
+  const { text: rest, tags } = extractTags(text);
   let priority = null;
   let dueDate = null;
 
-  let title = String(text || '')
-    .replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (_, space, tag) => {
-      const clean = tag.toLowerCase().slice(0, 24);
-      if (!tags.includes(clean)) tags.push(clean);
-      return space;
-    })
+  let title = rest
     .replace(/(^|\s)!(high|medium|med|low|h|m|l)(?=\s|$)/gi, (_, space, word) => {
       priority = PRIORITY_WORDS[word.toLowerCase()];
       return space;

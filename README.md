@@ -1,8 +1,10 @@
 # Aurum Tasks
 
-A clean, gold-accented todo list built with plain HTML, CSS and JavaScript. No framework and no build step, so it deploys straight to GitHub Pages.
+A clean, gold-accented todo list and notebook built with plain HTML, CSS and JavaScript. No framework and no build step, so it deploys straight to GitHub Pages.
 
 ![Aurum Tasks screenshot](docs/screenshot.png)
+
+![The Notes view: pinned and coloured note cards with checklists](docs/screenshot-notes.png)
 
 **Live demo:** <https://imainzed5.github.io/aurum-tasks/>
 
@@ -13,9 +15,12 @@ A clean, gold-accented todo list built with plain HTML, CSS and JavaScript. No f
 - **Priorities, due dates and tags**, with overdue tasks in red and today's tasks in amber
 - **Filters:** All / Active / Done, one-click tag chips, live search, and four sort orders
 - **Drag to reorder** with a mouse or on a touch screen, plus arrow keys for keyboard users
+- **Notes:** a second view (the Tasks / Notes switch at the top) with note cards that save as you type
+- **Checklists and Markdown in notes:** tick items right on a card, and turn any open item into a task with one click
+- **Pin and colour notes**, tag and search them, and link a note to a task (the task row shows a chip that opens it)
 - **Daily summary:** greeting, progress ring, and counts for overdue, due today and high priority
 - **Light and dark themes**, remembered between visits
-- **Export / import** your tasks as a JSON file for backup or moving to another browser
+- **Export / import** your tasks and notes as one JSON file for backup or moving to another browser
 - **Saves automatically** in the browser (localStorage) and stays in sync across open tabs
 - **Responsive and accessible:** works on phones, labelled for screen readers, visible focus states, respects reduced motion
 
@@ -29,12 +34,29 @@ A clean, gold-accented todo list built with plain HTML, CSS and JavaScript. No f
 | `@mon` … `@sun`, `@friday` | Due on the next one of that weekday |
 | `@nextweek` | Due 7 days from today |
 
+## Writing notes
+
+Notes understand a small, safe subset of Markdown. It is turned into page elements directly (never `innerHTML`), so nothing typed in a note can become markup.
+
+| Type in a note | What you get |
+| --- | --- |
+| `- [ ] item` / `- [x] item` | A checklist item you can tick on the card |
+| `- item` or `1. item` | Bullet or numbered list |
+| `# Title`, `## Section`, `### Label` | Headings |
+| `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` | Inline styles |
+| `[text](https://…)` or a bare `https://` link | Links (open in a new tab) |
+| `> quote`, `---` | Quote, divider |
+
+The button beside an open checklist item moves it to the task list. Quick-add words still work there, so `- [ ] Send invite !high @fri` becomes a high-priority task due Friday, and the task also gets the note's tags. **Undo** puts it back.
+
 ## Keyboard shortcuts
 
 | Key | Action |
 | --- | --- |
-| `N` | Jump to the new-task box |
+| `N` | Jump to the new-task (or new-note) box |
 | `/` | Jump to search |
+| `Enter` in a note title | Move on to the note text |
+| `Ctrl` + `Enter` | Add the note, or close the note dialog |
 | `Esc` | Clear search / leave a field |
 | `↑` `↓` on a task's handle | Move the task up or down |
 | Double-click a task | Edit it |
@@ -43,16 +65,18 @@ A clean, gold-accented todo list built with plain HTML, CSS and JavaScript. No f
 
 ```
 aurum-tasks/
-├── index.html        Page layout, the task row template and the edit dialog
+├── index.html        Page layout, the task row and note card templates, both dialogs
 ├── css/
 │   └── style.css     Design tokens (colours, fonts) and all styles, light + dark
 ├── js/
 │   ├── app.js        Entry point: wires clicks, keys and drag-and-drop to the store
-│   ├── store.js      State, saving to localStorage, filtering, sorting, import/export
-│   ├── ui.js         Renders the page from state; toast and edit dialog
-│   └── utils.js      Date helpers, tag parsing, quick-add parser
+│   ├── store.js      State for tasks and notes, saving to localStorage, filtering, sorting, import/export
+│   ├── ui.js         Renders the page from state; toast, task dialog and note dialog
+│   ├── markdown.js   The small Markdown renderer used by notes (builds DOM, never innerHTML)
+│   └── utils.js      Date helpers, tag parsing, quick-add parser, checklist-line helpers
 └── docs/
-    └── screenshot.png
+    ├── screenshot.png
+    └── screenshot-notes.png
 ```
 
 ### How the code fits together
@@ -60,7 +84,7 @@ aurum-tasks/
 The app follows a simple one-way data flow:
 
 1. A user action (click, key, drag) is handled in `app.js`.
-2. `app.js` calls a function in `store.js`, such as `addTask()` or `setFilter()`.
+2. `app.js` calls a function in `store.js`, such as `addTask()`, `updateNote()` or `setFilter()`.
 3. The store updates its state, saves it to localStorage and notifies subscribers.
 4. `ui.js` re-renders the page from the new state.
 
@@ -79,6 +103,23 @@ The UI never changes data directly, which keeps the logic in one place and easy 
   tags: ["work"],
   createdAt: 1761525180000,  // timestamp
   completedAt: null
+}
+```
+
+### Note data model
+
+```js
+{
+  id: "9b2e…",
+  title: "Weekly report draft",   // may be empty if the note has text
+  body: "## Shipped
+- [ ] …",     // Markdown source
+  tags: ["work"],
+  pinned: false,
+  color: "sage",                   // null | "gold" | "sage" | "clay" | "rose" | "dusk"
+  taskId: "c1f8…",                 // linked task, or null
+  createdAt: 1761525180000,
+  updatedAt: 1761528780000         // last change to the title, text or tags
 }
 ```
 
@@ -120,6 +161,7 @@ Every later `git push` to `main` redeploys the site automatically.
 - [x] Phase 4: Priority, due dates and tags
 - [x] Phase 5: Theme toggle, drag-and-drop, export/import, mobile layout
 - [x] Phase 6: README and screenshot
+- [x] Phase 7: Notes with checklists, Markdown, pins, colours and task links
 
 ### Ideas for next steps
 

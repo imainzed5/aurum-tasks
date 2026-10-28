@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Aurum Tasks</title>
-  <meta name="description" content="A gold-accented todo list with priorities, due dates, tags, search and drag-and-drop ordering.">
+  <meta name="description" content="A gold-accented todo list and notebook with priorities, due dates, tags, checklists, search and drag-and-drop ordering.">
   <meta name="theme-color" content="#FAF8F2">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23C5A059' d='M12 2c.6 6 4 9.4 10 10-6 .6-9.4 4-10 10-.6-6-4-9.4-10-10 6-.6 9.4-4 10-10z'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +32,14 @@
       </svg>
       <span class="brand-name">Aurum <b>Tasks</b></span>
     </a>
+    <nav class="view-switch" aria-label="Views">
+      <a class="view-link" href="#tasks" data-view="tasks" aria-current="page">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>Tasks
+      </a>
+      <a class="view-link" href="#notes" data-view="notes">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Notes
+      </a>
+    </nav>
     <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch to dark theme">
       <svg class="ico i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="ico i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -75,109 +83,194 @@
       </ul>
     </section>
 
-    <!-- Composer: add a new task -->
-    <form class="composer" id="composer" autocomplete="off" novalidate>
-      <div class="composer-main">
-        <label class="sr-only" for="new-title">New task</label>
-        <input class="composer-input" id="new-title" name="title" type="text" maxlength="200"
-               placeholder="What needs doing?" enterkeyhint="done">
-        <button class="btn btn-gold" type="submit">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span>Add<span class="hide-sm"> task</span></span>
-        </button>
-      </div>
-      <div class="composer-opts">
-        <fieldset class="seg">
-          <legend class="sr-only">Priority</legend>
-          <input type="radio" name="priority" id="p-low" value="low"><label for="p-low" class="seg-low">Low</label>
-          <input type="radio" name="priority" id="p-medium" value="medium" checked><label for="p-medium" class="seg-medium">Medium</label>
-          <input type="radio" name="priority" id="p-high" value="high"><label for="p-high" class="seg-high">High</label>
-        </fieldset>
-        <label class="field field-date" for="new-due">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
-          <span class="sr-only">Due date</span>
-          <input type="date" id="new-due" name="due">
-        </label>
-        <label class="field field-tags" for="new-tags">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
-          <span class="sr-only">Tags</span>
-          <input type="text" id="new-tags" name="tags" maxlength="120" placeholder="Tags, separated by commas">
-        </label>
-      </div>
-      <p class="composer-hint" id="composer-hint">Quick add: <code>Send report #work !high @fri</code> sets the tag, priority and due date for you.</p>
-      <p class="composer-preview" id="composer-preview" hidden></p>
-    </form>
-
-    <!-- Board: filters, search, sort and the list itself -->
-    <section class="board" aria-label="Tasks">
-      <div class="toolbar">
-        <div class="tabs" role="group" aria-label="Show tasks">
-          <button class="tab" type="button" data-filter="all" aria-pressed="true">All <span class="tab-count">0</span></button>
-          <button class="tab" type="button" data-filter="active" aria-pressed="false">Active <span class="tab-count">0</span></button>
-          <button class="tab" type="button" data-filter="done" aria-pressed="false">Done <span class="tab-count">0</span></button>
+    <!-- ===== Tasks view ===== -->
+    <div class="view" id="tasks-view">
+      <!-- Composer: add a new task -->
+      <form class="composer" id="composer" autocomplete="off" novalidate>
+        <div class="composer-main">
+          <label class="sr-only" for="new-title">New task</label>
+          <input class="composer-input" id="new-title" name="title" type="text" maxlength="200"
+                 placeholder="What needs doing?" enterkeyhint="done">
+          <button class="btn btn-gold" type="submit">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Add<span class="hide-sm"> task</span></span>
+          </button>
         </div>
-        <div class="toolbar-right">
-          <label class="search" for="search">
+        <div class="composer-opts">
+          <fieldset class="seg">
+            <legend class="sr-only">Priority</legend>
+            <input type="radio" name="priority" id="p-low" value="low"><label for="p-low" class="seg-low">Low</label>
+            <input type="radio" name="priority" id="p-medium" value="medium" checked><label for="p-medium" class="seg-medium">Medium</label>
+            <input type="radio" name="priority" id="p-high" value="high"><label for="p-high" class="seg-high">High</label>
+          </fieldset>
+          <label class="field field-date" for="new-due">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+            <span class="sr-only">Due date</span>
+            <input type="date" id="new-due" name="due">
+          </label>
+          <label class="field field-tags" for="new-tags">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+            <span class="sr-only">Tags</span>
+            <input type="text" id="new-tags" name="tags" maxlength="120" placeholder="Tags, separated by commas">
+          </label>
+        </div>
+        <p class="composer-hint" id="composer-hint">Quick add: <code>Send report #work !high @fri</code> sets the tag, priority and due date for you.</p>
+        <p class="composer-preview" id="composer-preview" hidden></p>
+      </form>
+
+      <!-- Board: filters, search, sort and the list itself -->
+      <section class="board" aria-label="Tasks">
+        <div class="toolbar">
+          <div class="tabs" role="group" aria-label="Show tasks">
+            <button class="tab" type="button" data-filter="all" aria-pressed="true">All <span class="tab-count">0</span></button>
+            <button class="tab" type="button" data-filter="active" aria-pressed="false">Active <span class="tab-count">0</span></button>
+            <button class="tab" type="button" data-filter="done" aria-pressed="false">Done <span class="tab-count">0</span></button>
+          </div>
+          <div class="toolbar-right">
+            <label class="search" for="search">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <span class="sr-only">Search tasks</span>
+              <input type="search" id="search" placeholder="Search tasks" autocomplete="off">
+              <kbd aria-hidden="true">/</kbd>
+            </label>
+            <label class="select" for="sort">
+              <span class="sr-only">Sort by</span>
+              <select id="sort">
+                <option value="manual">Manual order</option>
+                <option value="due">Due date</option>
+                <option value="priority">Priority</option>
+                <option value="newest">Newest first</option>
+              </select>
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </label>
+          </div>
+        </div>
+
+        <div class="tag-row" id="tag-row" role="group" aria-label="Filter by tag" hidden></div>
+
+        <div class="sample-note" id="sample-note" hidden>
+          <p><strong>These are sample tasks</strong> so you can try things out. Clear them when you're ready to start your own list.</p>
+          <div class="sample-actions">
+            <button class="link-btn" type="button" id="samples-clear">Clear samples</button>
+            <button class="link-btn muted" type="button" id="samples-keep">Keep them</button>
+          </div>
+        </div>
+
+        <ol class="task-list" id="task-list"></ol>
+
+        <div class="empty" id="empty" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.6 6 4 9.4 10 10-6 .6-9.4 4-10 10-.6-6-4-9.4-10-10 6-.6 9.4-4 10-10z"/></svg>
+          <p class="empty-title" id="empty-title">No tasks yet</p>
+          <p class="empty-text" id="empty-text">Add your first task above.</p>
+        </div>
+
+        <footer class="board-foot">
+          <span class="left-count" id="left-count">0 tasks left</span>
+          <button class="link-btn" type="button" id="clear-done">Clear completed</button>
+          <span class="foot-spacer"></span>
+          <span class="foot-io">
+            <button class="link-btn" type="button" data-io="export">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export
+            </button>
+            <button class="link-btn" type="button" data-io="import">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Import
+            </button>
+          </span>
+        </footer>
+      </section>
+
+      <p class="shortcuts">
+        <span><kbd>N</kbd> new task</span>
+        <span><kbd>/</kbd> search</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> on a handle to reorder</span>
+        <span>Double-click a task to edit</span>
+      </p>
+      <p class="touch-hint">Tap a task to edit or delete it. Drag the dotted handle to reorder.
+      </p>
+    </div>
+
+    <!-- ===== Notes view ===== -->
+    <div class="view" id="notes-view" hidden>
+      <!-- Composer: add a new note. The text box opens when the form has focus. -->
+      <form class="composer note-composer" id="note-composer" autocomplete="off" novalidate>
+        <div class="composer-main">
+          <label class="sr-only" for="note-new-title">New note title</label>
+          <input class="composer-input" id="note-new-title" type="text" maxlength="200"
+                 placeholder="Take a note…" enterkeyhint="next">
+          <button class="btn btn-gold" type="submit">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Add<span class="hide-sm"> note</span></span>
+          </button>
+        </div>
+        <div class="note-composer-more">
+          <label class="sr-only" for="note-new-body">Note text</label>
+          <textarea class="note-composer-body" id="note-new-body" rows="4" maxlength="20000"
+                    placeholder="Write something. Start a line with - [ ] to make a checklist."></textarea>
+          <p class="composer-hint">Put <code>#tags</code> in the title. The text understands simple Markdown.<span class="kbd-hint"> <kbd>Ctrl</kbd> <kbd>Enter</kbd> adds the note.</span></p>
+        </div>
+      </form>
+
+      <section class="board" aria-label="Notes">
+        <div class="toolbar">
+          <label class="search search-wide" for="note-search">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <span class="sr-only">Search tasks</span>
-            <input type="search" id="search" placeholder="Search tasks" autocomplete="off">
+            <span class="sr-only">Search notes</span>
+            <input type="search" id="note-search" placeholder="Search notes" autocomplete="off">
             <kbd aria-hidden="true">/</kbd>
           </label>
-          <label class="select" for="sort">
-            <span class="sr-only">Sort by</span>
-            <select id="sort">
-              <option value="manual">Manual order</option>
-              <option value="due">Due date</option>
-              <option value="priority">Priority</option>
+          <label class="select" for="note-sort">
+            <span class="sr-only">Sort notes by</span>
+            <select id="note-sort">
+              <option value="edited">Last edited</option>
               <option value="newest">Newest first</option>
+              <option value="title">Title A–Z</option>
             </select>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </label>
         </div>
-      </div>
 
-      <div class="tag-row" id="tag-row" role="group" aria-label="Filter by tag" hidden></div>
+        <div class="tag-row" id="note-tag-row" role="group" aria-label="Filter notes by tag" hidden></div>
 
-      <div class="sample-note" id="sample-note" hidden>
-        <p><strong>These are sample tasks</strong> so you can try things out. Clear them when you're ready to start your own list.</p>
-        <div class="sample-actions">
-          <button class="link-btn" type="button" id="samples-clear">Clear samples</button>
-          <button class="link-btn muted" type="button" id="samples-keep">Keep them</button>
+        <div class="sample-note" id="note-sample-note" hidden>
+          <p><strong>These are sample notes</strong> that show what notes can do. Clear them when you're ready to write your own.</p>
+          <div class="sample-actions">
+            <button class="link-btn" type="button" id="note-samples-clear">Clear samples</button>
+            <button class="link-btn muted" type="button" id="note-samples-keep">Keep them</button>
+          </div>
         </div>
-      </div>
 
-      <ol class="task-list" id="task-list"></ol>
+        <div class="note-grid" id="note-grid"></div>
 
-      <div class="empty" id="empty" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.6 6 4 9.4 10 10-6 .6-9.4 4-10 10-.6-6-4-9.4-10-10 6-.6 9.4-4 10-10z"/></svg>
-        <p class="empty-title" id="empty-title">No tasks yet</p>
-        <p class="empty-text" id="empty-text">Add your first task above.</p>
-      </div>
+        <div class="empty" id="note-empty" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.6 6 4 9.4 10 10-6 .6-9.4 4-10 10-.6-6-4-9.4-10-10 6-.6 9.4-4 10-10z"/></svg>
+          <p class="empty-title" id="note-empty-title">No notes yet</p>
+          <p class="empty-text" id="note-empty-text">Write your first note above.</p>
+        </div>
 
-      <footer class="board-foot">
-        <span class="left-count" id="left-count">0 tasks left</span>
-        <button class="link-btn" type="button" id="clear-done">Clear completed</button>
-        <span class="foot-spacer"></span>
-        <span class="foot-io">
-          <button class="link-btn" type="button" id="export-btn">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export
-          </button>
-          <button class="link-btn" type="button" id="import-btn">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Import
-          </button>
-        </span>
-        <input type="file" id="import-file" accept="application/json,.json" hidden>
-      </footer>
-    </section>
+        <footer class="board-foot">
+          <span class="left-count" id="note-count">0 notes</span>
+          <span class="foot-spacer"></span>
+          <span class="foot-io">
+            <button class="link-btn" type="button" data-io="export">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export
+            </button>
+            <button class="link-btn" type="button" data-io="import">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Import
+            </button>
+          </span>
+        </footer>
+      </section>
 
-    <p class="shortcuts">
-      <span><kbd>N</kbd> new task</span>
-      <span><kbd>/</kbd> search</span>
-      <span><kbd>↑</kbd><kbd>↓</kbd> on a handle to reorder</span>
-      <span>Double-click a task to edit</span>
-    </p>
-    <p class="touch-hint">Tap a task to edit or delete it. Drag the dotted handle to reorder.
-    </p>
+      <p class="shortcuts">
+        <span><kbd>N</kbd> new note</span>
+        <span><kbd>/</kbd> search</span>
+        <span><kbd>Ctrl</kbd><kbd>Enter</kbd> add or close a note</span>
+        <span>Click a note to edit</span>
+      </p>
+      <p class="touch-hint">Tap a note to edit it. Tick checklist items right on the card.</p>
+    </div>
+
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
   </main>
 </div>
 
@@ -206,6 +299,88 @@
     </div>
   </li>
 </template>
+
+<!-- One note card. Cloned by js/ui.js for every note. -->
+<template id="note-tpl">
+  <article class="note-card">
+    <div class="note-head">
+      <h3 class="note-title"></h3>
+      <button class="icon-btn sm note-pin" type="button" data-action="pin" data-role="pin">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3.5h6l-1 6.5 3.5 3v2h-11v-2L10 10z"/><path d="M12 15v5.5"/></svg>
+      </button>
+    </div>
+    <div class="note-body md"></div>
+    <div class="note-foot">
+      <div class="note-meta"></div>
+      <div class="note-actions">
+        <button class="icon-btn sm" type="button" data-action="edit" data-role="edit">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
+        </button>
+        <button class="icon-btn sm danger" type="button" data-action="delete" data-role="delete">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg>
+        </button>
+      </div>
+    </div>
+  </article>
+</template>
+
+<!-- Note dialog. Everything saves as you type. -->
+<dialog class="editor note-editor" id="note-editor" aria-labelledby="note-editor-title">
+  <form class="editor-form" id="note-editor-form" novalidate>
+    <div class="editor-head">
+      <h2 class="editor-title" id="note-editor-title">Edit note</h2>
+      <div class="editor-head-actions">
+        <button class="icon-btn sm note-pin" type="button" id="note-edit-pin" aria-pressed="false">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3.5h6l-1 6.5 3.5 3v2h-11v-2L10 10z"/><path d="M12 15v5.5"/></svg>
+        </button>
+        <button class="icon-btn sm" type="button" id="note-editor-close" aria-label="Close">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <label class="form-field" for="note-edit-title"><span>Title</span>
+      <input id="note-edit-title" type="text" maxlength="200" placeholder="Untitled">
+    </label>
+    <div class="form-field">
+      <div class="field-head">
+        <label class="field-label" for="note-edit-body">Note</label>
+        <fieldset class="seg seg-plain">
+          <legend class="sr-only">Show</legend>
+          <input type="radio" name="note-mode" id="note-mode-write" value="write" checked><label for="note-mode-write">Write</label>
+          <input type="radio" name="note-mode" id="note-mode-preview" value="preview"><label for="note-mode-preview">Preview</label>
+        </fieldset>
+      </div>
+      <textarea id="note-edit-body" rows="9" maxlength="20000" placeholder="Write something. Start a line with - [ ] to make a checklist."></textarea>
+      <div class="md md-preview" id="note-edit-preview" hidden></div>
+      <p class="field-hint"><code>- [ ]</code> checklist · <code>-</code> bullet · <code>#</code> heading · <code>**bold**</code> · <code>*italic*</code> · <code>[text](https://…)</code></p>
+    </div>
+    <label class="form-field" for="note-edit-tags"><span>Tags</span>
+      <input id="note-edit-tags" type="text" maxlength="120" placeholder="work, ideas">
+    </label>
+    <div class="form-row">
+      <fieldset class="form-field swatch-field">
+        <legend>Colour</legend>
+        <div class="swatches">
+          <input type="radio" name="note-color" id="note-color-none" value=""><label class="swatch" for="note-color-none" title="No colour"><span class="sr-only">No colour</span></label>
+          <input type="radio" name="note-color" id="note-color-gold" value="gold"><label class="swatch" for="note-color-gold" data-color="gold" title="Gold"><span class="sr-only">Gold</span></label>
+          <input type="radio" name="note-color" id="note-color-sage" value="sage"><label class="swatch" for="note-color-sage" data-color="sage" title="Sage"><span class="sr-only">Sage</span></label>
+          <input type="radio" name="note-color" id="note-color-clay" value="clay"><label class="swatch" for="note-color-clay" data-color="clay" title="Clay"><span class="sr-only">Clay</span></label>
+          <input type="radio" name="note-color" id="note-color-rose" value="rose"><label class="swatch" for="note-color-rose" data-color="rose" title="Rose"><span class="sr-only">Rose</span></label>
+          <input type="radio" name="note-color" id="note-color-dusk" value="dusk"><label class="swatch" for="note-color-dusk" data-color="dusk" title="Dusk"><span class="sr-only">Dusk</span></label>
+        </div>
+      </fieldset>
+      <label class="form-field" for="note-edit-task"><span>Linked task</span>
+        <select id="note-edit-task"></select>
+      </label>
+    </div>
+    <div class="editor-foot">
+      <button class="link-btn link-danger" type="button" id="note-editor-delete">Delete note</button>
+      <span class="spacer"></span>
+      <span class="save-state" id="note-save-state">Saved</span>
+      <button class="btn btn-gold btn-sm" type="submit">Done</button>
+    </div>
+  </form>
+</dialog>
 
 <!-- Edit dialog -->
 <dialog class="editor" id="editor" aria-labelledby="editor-title">
